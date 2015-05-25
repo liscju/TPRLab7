@@ -5,6 +5,7 @@ using namespace std;
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
+#include "helper_functions.h"
 #define BLOCK_SIZE 16
 
 typedef struct
@@ -108,8 +109,19 @@ int main(int argc, char * const argv[])
 	}
 	A_input.close();
 	B_input.close();
+// TIMER BEGIN
+	StopWatchInterface *timer = NULL;
+	sdkCreateTimer(&timer);
+	sdkResetTimer(&timer);
+	sdkStartTimer(&timer);
 
 	MatMul(A, B, C);
+
+	sdkStopTimer(&timer);
+	float time = sdkGetTimerValue(&timer);
+	sdkDeleteTimer(&timer);
+	std::cout << "Time of the multiplication :" << time << " ms" << std::endl;
+// TIMER END
 	std::ofstream C_output;
 	C_output.open("C.txt");
 	for (int i=0; i<Width; i++)
