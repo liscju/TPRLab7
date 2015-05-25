@@ -10,9 +10,10 @@ using namespace std;
 #include "helper_functions.h"
 
 #define BLOCK_SIZE 16
+#define ITER_COUNT 1000
 
-typedef struct
-{	int width;
+typedef struct {
+	int width;
 	int height;
 	float *elements;
 } Matrix;
@@ -21,8 +22,7 @@ typedef struct
 __global__ void MatMulKernel (const Matrix, const Matrix, Matrix);
 
 // Host code
-void MatMul(const Matrix A, const Matrix B, Matrix C)
-{
+void MatMulGPU(const Matrix A, const Matrix B, Matrix C) {
 	// Load matrices A and B to device memory
 	Matrix d_A;
 	d_A.width = A.width; d_A.height = A.height;
@@ -43,9 +43,25 @@ void MatMul(const Matrix A, const Matrix B, Matrix C)
 	cudaMalloc((void**) &d_C.elements, size);
 	
 	// call kernel
-        dim3 dimBlock(); // threads per block?
-        dim3 dimGrid(); // number of blocks?
-	MatMulKernel<<<dimGrid, dimBlock>>>(d_A, d_B, d_C);
+    dim3 dimBlock(256); // threads per block?
+    dim3 dimGrid(256); // number of blocks?
+
+	// TIMER START
+	StopWatchInterface *timer=NULL;
+	sdkCreateTimer(&timer);
+	sdkResetTimer(&timer);
+	sdkStartTimer(&timer);
+
+	for(int i=0; i<ITER_COUNT; ++i) {
+		MatMulKernel<<<dimGrid, dimBlock>>>(d_A, d_B, d_C);
+	}
+
+	// TIMER STOP
+	sdkStopTimer(&timer);
+	float time = sdkGetTimerValue(&timer);
+	sdkDeleteTimer(&timer);
+
+	printf("Elapsed time: %f\n", time/ITER_COUNT);
 	
 	// copy C to host
 	cudaMemcpy(C.elements, d_C.elements, size, cudaMemcpyDeviceToHost);
@@ -57,13 +73,20 @@ void MatMul(const Matrix A, const Matrix B, Matrix C)
 }
 
 //matrix multiplication kernel
-__global__ void MatMulKernel(Matrix A, Matrix B, Matrix C)
-{	
-	/**** write your kernel here!****/
+__global__ void MatMulKernel(Matrix A, Matrix B, Matrix C) {	
+	// Each thread computes one element of C
+	// by accumulating results into Cvalue
+	float Cvalue = 0;
+	int row = blockIdx.y * blockDim.y + threadIdx.y;
+	int col = blockIdx.x * blockDim.x + threadIdx.x;
+	if(row > A.height || col > B.width) return;
+	for (int e = 0; e < A.width; ++e) {
+		Cvalue += A.elements[row * A.width + e] * B.elements[e * B.width + col];
+	}
+	C.elements[row * C.width + col] = Cvalue;
 }
 
-int main(int argc, char * const argv[])
-{	
+int main(int argc, char * const argv[]) {	
 	int Width = 16;
 	
 	Matrix A;
@@ -92,8 +115,8 @@ int main(int argc, char * const argv[])
 	A_input >> a;	
 	B_input >> b;	
 	int i = 0;
-	while (!A_input.eof())
-	{	A.elements[i] = a;
+	while (!A_input.eof()) {
+		A.elements[i] = a;
 		B.elements[i] = b;
 		A_input >> a;	
 		B_input >> b;	
@@ -102,14 +125,28 @@ int main(int argc, char * const argv[])
 	A_input.close();
 	B_input.close();
 
-	MatMul(A, B, C);
+	// TIMER START
+	StopWatchInterface *timer=NULL;
+	sdkCreateTimer(&timer);
+	sdkResetTimer(&timer);
+	sdkStartTimer(&timer);
+
+	MatMulGPU(A, B, C);
+
+	// TIMER STOP
+	sdkStopTimer(&timer);
+	float time = sdkGetTimerValue(&timer);
+	sdkDeleteTimer(&timer);
+
 	std::ofstream C_output;
 	C_output.open("C.txt");
-	for (int i=0; i<Width; i++)
-	{	for (int j=0; j<Width; j++)
+	for (int i=0; i<Width; i++) {
+		for (int j=0; j<Width; j++) {
 			C_output<<C.elements[i*Width+j]<<"\t";
+		}
 		C_output<<endl;
 	}
 
+	printf("Elapsed total time: %f\n", time);
 }
 	
