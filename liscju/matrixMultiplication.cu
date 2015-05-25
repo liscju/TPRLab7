@@ -69,6 +69,21 @@ __global__ void MatMulKernel(Matrix A, Matrix B, Matrix C)
 	C.elements[row*C.width + col] = Cvalue;
 }
 
+// To by bylo calkiem dobre :P
+void MatMulHost(Matrix A,Matrix B,Matrix C)
+{
+	for (int row_iter = 0; row_iter < A.height ; row_iter++ )
+	{
+		for (int column_iter = 0; column_iter < A.width; column_iter++ )
+		{
+					
+			for (int e=0; e<A.width; e++)
+				Cvalue += A.elements[row*A.width+ e] *B.elements[e*B.width + col];
+			C.elements[row*C.width + col] = Cvalue;
+		}
+	}
+}
+
 
 int main(int argc, char * const argv[])
 {	
