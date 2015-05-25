@@ -39,8 +39,8 @@ void MatMul(const Matrix A, const Matrix B, Matrix C)
 	cudaMalloc((void**) &d_C.elements, size);
 	
 	// call kernel
-        dim3 dimBlock(); // threads per block?
-        dim3 dimGrid(); // number of blocks?
+        dim3 dimBlock(256); // threads per block?
+        dim3 dimGrid(256); // number of blocks?
 	MatMulKernel<<<dimGrid, dimBlock>>>(d_A, d_B, d_C);
 	
 	// copy C to host
@@ -54,9 +54,20 @@ void MatMul(const Matrix A, const Matrix B, Matrix C)
 
 //matrix multiplication kernel
 __global__ void MatMulKernel(Matrix A, Matrix B, Matrix C)
-{	
-	/**** write your kernel here!****/
+{
+	// each thread computes one element of C and acumulates results to
+	float Cvalue = 0;
+	int row = blockIdx.y * blockDim.y + threadIdx.y;
+	int col = blockIdx.x * blockDim.x + threadIdx.x;
+	if ((row>=A.height) || (col>=B.width)){
+		return;
+	}
+	for (int e=0; e<A.width; e++)
+		Cvalue += A.elements[row*A.width+ e] *
+			B.elements[e*B.width + col];
+	C.elements[row*C.width + col] = Cvalue;
 }
+
 
 int main(int argc, char * const argv[])
 {	
