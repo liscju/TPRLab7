@@ -191,5 +191,9 @@ int main(int argc, char * const argv[]) {
 
 	printf("GPU Elapsed total time: %f\n", gpuTime);
 	printf("CPU Elapsed total time: %f\n", cpuTime);
+
+	delete A.elements;
+	delete B.elements;
+	delete C.elements;
 }
 	
