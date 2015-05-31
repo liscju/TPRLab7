@@ -196,5 +196,8 @@ int main(int argc, char * const argv[]) {
 	delete A.elements;
 	delete B.elements;
 	delete C.elements;
+
+	cudaDeviceSynchronize();
+	return 0;
 }
 	
