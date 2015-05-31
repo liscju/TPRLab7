@@ -188,6 +188,7 @@ int main(int argc, char * const argv[]) {
 		}
 		C_output<<endl;
 	}
+	C_output.close();
 
 	printf("GPU Elapsed total time: %f\n", gpuTime);
 	printf("CPU Elapsed total time: %f\n", cpuTime);
