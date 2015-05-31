@@ -61,7 +61,7 @@ void MatMulGPU(const Matrix A, const Matrix B, Matrix C) {
 	float time = sdkGetTimerValue(&timer);
 	sdkDeleteTimer(&timer);
 
-	printf("Elapsed time: %f\n", time/ITER_COUNT);
+	printf("GPU Elapsed time: %f\n", time/ITER_COUNT);
 	
 	// copy C to host
 	cudaMemcpy(C.elements, d_C.elements, size, cudaMemcpyDeviceToHost);
@@ -84,6 +84,33 @@ __global__ void MatMulKernel(Matrix A, Matrix B, Matrix C) {
 		Cvalue += A.elements[row * A.width + e] * B.elements[e * B.width + col];
 	}
 	C.elements[row * C.width + col] = Cvalue;
+}
+
+void MatMulCPU(Matrix A, Matrix B, Matrix C) {
+	// TIMER START
+	StopWatchInterface *timer=NULL;
+	sdkCreateTimer(&timer);
+	sdkResetTimer(&timer);
+	sdkStartTimer(&timer);
+
+	for(int i=0; i<ITER_COUNT; ++i) {		
+		for(int row=0; row<A.height; row++) {
+			for(int col=0; col<B.width; col++) {
+				float Cvalue = 0;
+				for (int e = 0; e < A.width; ++e) {
+					Cvalue += A.elements[row * A.width + e] * B.elements[e * B.width + col];
+				}
+				C.elements[row * C.width + col] = Cvalue;
+			}
+		}
+	}
+
+	// TIMER STOP
+	sdkStopTimer(&timer);
+	float time = sdkGetTimerValue(&timer);
+	sdkDeleteTimer(&timer);
+
+	printf("CPU Elapsed time: %f\n", time/ITER_COUNT);
 }
 
 int main(int argc, char * const argv[]) {	
@@ -135,8 +162,23 @@ int main(int argc, char * const argv[]) {
 
 	// TIMER STOP
 	sdkStopTimer(&timer);
-	float time = sdkGetTimerValue(&timer);
+	float gpuTime = sdkGetTimerValue(&timer);
 	sdkDeleteTimer(&timer);
+
+	
+	// TIMER START
+	timer=NULL;
+	sdkCreateTimer(&timer);
+	sdkResetTimer(&timer);
+	sdkStartTimer(&timer);
+
+	MatMulCPU(A, B, C);
+
+	// TIMER STOP
+	sdkStopTimer(&timer);
+	float cpuTime = sdkGetTimerValue(&timer);
+	sdkDeleteTimer(&timer);
+
 
 	std::ofstream C_output;
 	C_output.open("C.txt");
@@ -147,6 +189,7 @@ int main(int argc, char * const argv[]) {
 		C_output<<endl;
 	}
 
-	printf("Elapsed total time: %f\n", time);
+	printf("GPU Elapsed total time: %f\n", gpuTime);
+	printf("CPU Elapsed total time: %f\n", cpuTime);
 }
 	

@@ -1,0 +1,4 @@
+GPU Elapsed time: 0.000016
+CPU Elapsed time: 0.014800
+GPU Elapsed total time: 1.203000
+CPU Elapsed total time: 14.810000
