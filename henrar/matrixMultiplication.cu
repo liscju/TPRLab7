@@ -144,6 +144,7 @@ int main(int argc, char * const argv[])
 	}
 	
 	C_output.close();
+	cudaDeviceReset();
 	return 0;
 }
 	

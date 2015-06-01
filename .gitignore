@@ -1,0 +1,5 @@
+*.dll
+lucas/HenrarCUDALab1.exe
+*.exe
+henrar/HenrarCUDALab1.ilk
+*.pdb
