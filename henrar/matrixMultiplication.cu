@@ -7,6 +7,7 @@
 #include <cuda.h>
 #include "helper_functions.h"
 #include "helper_cuda.h"
+#include <string>
 
 #define BLOCK_SIZE 16
 
@@ -22,7 +23,7 @@ public:
 __global__ void MatMulKernel (const Matrix, const Matrix, Matrix);
 
 // Host code
-void MatMul(const Matrix A, const Matrix B, Matrix C)
+void MatMul(const Matrix A, const Matrix B, Matrix C, std::ofstream& gpu_results, int p_thread, int p_block)
 {
 	StopWatchInterface *timer = NULL;
 	float elapsedTime = 0.0f;
@@ -47,8 +48,9 @@ void MatMul(const Matrix A, const Matrix B, Matrix C)
 	cudaMalloc((void**) &d_C.elements, size);
 	
 	// call kernel
-        dim3 dimBlock(128); // threads per block?
-        dim3 dimGrid(128); // number of blocks?
+
+    dim3 dimBlock(p_thread); // threads per block?
+	dim3 dimGrid(p_block); // number of blocks?
 
 
 	sdkCreateTimer(&timer);
@@ -65,7 +67,8 @@ void MatMul(const Matrix A, const Matrix B, Matrix C)
 	sdkStopTimer(&timer);
 	checkCudaErrors(cudaEventElapsedTime(&elapsedTime, start, stop));
 
-	std::cout << "Time: " << elapsedTime << std::endl;
+	std::cout << "Thread: " << p_thread << "Blocks: " << p_block << std::endl;
+	gpu_results << (p_thread * p_block) << "\t" << elapsedTime << std::endl;
 	// copy C to host
 	cudaMemcpy(C.elements, d_C.elements, size, cudaMemcpyDeviceToHost);
 
@@ -95,6 +98,11 @@ __global__ void MatMulKernel(Matrix A, Matrix B, Matrix C)
 int main(int argc, char * const argv[])
 {	
 	int Width = 16;
+
+
+	const int dimension = 6;
+	const int threads[dimension] = { 32, 64, 128, 256, 512, 1024 };
+	const int blocks[dimension] = { 128, 256, 512, 1024, 2048, 4096 };
 	
 	Matrix A;
 	Matrix B;
@@ -132,18 +140,28 @@ int main(int argc, char * const argv[])
 	A_input.close();
 	B_input.close();
 
-	MatMul(A, B, C);
+	std::ofstream gpu_results;
 	std::ofstream C_output;
-	C_output.open("output/gpu_results.txt");
-	for (int i = 0; i < Width; i++)
-	{	for (int j = 0; j < Width; j++)
+	gpu_results.open("output/gpu_results.txt");
+
+	int x;
+	for (x = 0; x < dimension; x++)
+	{
+		std::string file_name = "output/C[" + std::to_string(x) + "].txt";
+		C_output.open(file_name);
+		MatMul(A, B, C, gpu_results, threads[x], blocks[x]);
+		for (int i = 0; i < Width; i++)
 		{
-			C_output << C.elements[i*Width+j]<<"\t";
+			for (int j = 0; j < Width; j++)
+			{
+				C_output << C.elements[i*Width + j] << "\t";
+			}
+			C_output << std::endl;
 		}
-		C_output << std::endl;
+		C_output.close();
 	}
-	
-	C_output.close();
+
+	gpu_results.close();
 	cudaDeviceReset();
 	return 0;
 }
